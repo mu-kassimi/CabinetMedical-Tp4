@@ -1,9 +1,11 @@
 package ma.fsr.eda.rendezvousservice.service;
 
-import ma.fsr.eda.rendezvousservice.client.MedecinClient;
-import ma.fsr.eda.rendezvousservice.client.PatientClient;
+import lombok.extern.slf4j.Slf4j;
+import ma.fsr.eda.rendezvousservice.event.producer.RendezVousEventProducer;
 import ma.fsr.eda.rendezvousservice.model.RendezVous;
 import ma.fsr.eda.rendezvousservice.model.StatutRdv;
+import ma.fsr.eda.rendezvousservice.repository.MedecinProjectionRepository;
+import ma.fsr.eda.rendezvousservice.repository.PatientProjectionRepository;
 import ma.fsr.eda.rendezvousservice.repository.RendezVousRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,33 +14,57 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 public class RendezVousService {
 
     @Autowired
     private RendezVousRepository repository;
 
     @Autowired
-    private PatientClient patientClient;
+    private PatientProjectionRepository patientProjectionRepository;
 
     @Autowired
-    private MedecinClient medecinClient;
+    private MedecinProjectionRepository medecinProjectionRepository;
 
+    @Autowired
+    RendezVousEventProducer rendezVousEventProducer;
 
     public RendezVous create(RendezVous rdv) {
 
+        log.info("RendezVous : {}", rdv);
         if (rdv.getDateRdv() == null) {
-            throw new RuntimeException("La date du rendez-vous est obligatoire.");
+            String error = "La date du rendez-vous est obligatoire.";
+            rendezVousEventProducer.publishRendezVousCreationFailed(error, rdv);
+            throw new RuntimeException(error);
         }
 
         if (rdv.getDateRdv().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("La date du rendez-vous doit être future.");
+            String error = "La date du rendez-vous doit être future.";
+            rendezVousEventProducer.publishRendezVousCreationFailed(error, rdv);
+            throw new RuntimeException(error);
         }
 
-        patientClient.checkPatientExists(rdv.getPatientId());
-        medecinClient.checkMedecinExists(rdv.getMedecinId());
+        if(!patientProjectionRepository.existsById(rdv.getPatientId())) {
+            String error = "Patient introuvable.";
+            log.info("error {} pour le rdv {}", error, rdv);
+            rendezVousEventProducer.publishRendezVousCreationFailed(error, rdv);
+            throw new RuntimeException(error);
+        }
 
+        if(!medecinProjectionRepository.existsById(rdv.getMedecinId())) {
+            String error = "Médecin introuvable.";
+            rendezVousEventProducer.publishRendezVousCreationFailed(error, rdv);
+            throw new RuntimeException(error);
+        }
+
+        rdv.setDateCreation(LocalDateTime.now());
         rdv.setStatut(StatutRdv.PLANIFIE);
-        return repository.save(rdv);
+
+        RendezVous rendezVousSaved = repository.save(rdv);
+
+        rendezVousEventProducer.publishRendezVousCreated(rendezVousSaved);
+
+        return rendezVousSaved;
     }
 
     public List<RendezVous> list() {
@@ -64,12 +90,12 @@ public class RendezVousService {
         }
 
         if (rdv.getPatientId() != null) {
-            patientClient.checkPatientExists(rdv.getPatientId());
+            //patientClient.checkPatientExists(rdv.getPatientId());
             existing.setPatientId(rdv.getPatientId());
         }
 
         if (rdv.getMedecinId() != null) {
-            medecinClient.checkMedecinExists(rdv.getMedecinId());
+            //medecinClient.checkMedecinExists(rdv.getMedecinId());
             existing.setMedecinId(rdv.getMedecinId());
         }
 

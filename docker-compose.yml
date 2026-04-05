@@ -6,18 +6,23 @@ services:
     hostname: kafka
     ports:
       - "9092:9092"
-      - "29092:29092"
+
     environment:
       KAFKA_KRAFT_MODE: "true"
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
 
 
@@ -78,6 +83,18 @@ services:
     networks:
       - kafka-net
 
+  rendezvous-service:
+    build: ./rendezvous-service
+    container_name: rendezvous-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    networks:
+      - kafka-net
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
@@ -85,6 +102,8 @@ services:
       - "8080:8080"
     depends_on:
       - patient-service
+      - medecin-service
+      - rendezvous-service
     networks:
       - kafka-net
 

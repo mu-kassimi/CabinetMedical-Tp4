@@ -25,5 +25,6 @@ public class RendezVous {
 
     @Enumerated(EnumType.STRING)
     private StatutRdv statut;
-}
 
+    private LocalDateTime dateCreation;
+}
