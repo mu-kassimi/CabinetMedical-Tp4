@@ -52,91 +52,51 @@ Ils communiquent via des événements Kafka.
 
 ---
 
-## Structure du projet
+## Commandes pour le déploiement Docker
 
-```text
-cabinetMedicalTp4EDA/
-│
-├── docker-compose.yml           # Infrastructure Kafka (Zookeeper + Kafka)
-│
-├── api-gateway                  # Exposition REST externe uniquement
-│
-├── patient-service              # Event Producer
-├── medecin-service              # Event Producer
-├── rendezvous-service           # Event Producer & Consumer
-├── consultation-service         # Event Consumer & Producer
-├── billing-service              # Event Consumer & Producer
-│
-└── pom.xml                      # Projet parent (packaging pom)
-```
+Pour compiler, construire et démarrer les conteneurs Docker de tous les microservices, utilisez les commandes suivantes :
 
-## Infrastructure Kafka
+1. Paramétrer votre projet (en ignorant les tests) :
+    ```bash
+    mvn -DskipTests package
+    ```
 
-L’infrastructure Kafka est déployée via Docker Compose.
+2. Construire les images Docker sans cache :
+    ```bash
+    docker compose build --no-cache
+    ```
 
-Elle comprend :
+3. Démarrer les conteneurs en arrière-plan et reconstruire si nécessaire :
+    ```bash
+    docker compose up -d --build
+    ```
 
-- Un broker Kafka
-- (Optionnel) Zookeeper selon la configuration choisie
-- Kafka UI
-- AKHQ
+4. Pour arrêter et supprimer les conteneurs :
+    ```bash
+    docker compose down
+    ```
 
 ---
 
-### Ports exposés
+## Scénario de test
 
-- Kafka interne Docker : `kafka:9092`
-- Kafka accès machine locale : `localhost:29092`
-- Kafka UI : http://localhost:8088/
-- AKHQ : http://localhost:8087/ui/local/node
+Voici un exemple pas à pas de la création de différentes ressources :
 
----
+1. **Création d'un patient**  
+   ![Patient Creation](TestScreenshots/PatientCreation.png)
 
-### Configuration des microservices
+2. **Création d'un médecin**  
+   ![Medecin Creation](TestScreenshots/MedecinCreation.png)
 
-#### Depuis les microservices (dans Docker)
+3. **Création d'un rendez-vous** (déclenche automatiquement la création d'une consultation, puis d'une facture)  
+   ![Rendezvous Creation 1](TestScreenshots/Rendezvouscreation1.png)  
+   ![Rendezvous Creation 2](TestScreenshots/Rendezvouscreation2.png)
 
-```properties
-spring.kafka.bootstrap-servers=kafka:9092
-```
-# Kafka Cheat Sheet - Spring Boot Project
+4. **Vérification des consultations**  
+   ![Consultations](TestScreenshots/Consultations.png)
 
-## Configuration de l'application
-Depuis la machine locale (hors Docker) :
-`spring.kafka.bootstrap-servers=localhost:29092`
+5. **Vérification des factures**  
+   ![Factures](TestScreenshots/Factures.png)
 
----
-
-## Gestion de l'infrastructure Docker
-* **Démarrage de l’infrastructure :** `docker compose up -d`
-* **Vérification des conteneurs :** `docker ps`
-* **Logs Kafka :** `docker logs kafka`
-* **Arrêt de l’infrastructure :** `docker compose down`
-
----
-
-## Commandes Kafka utiles
-
-### Accéder au conteneur Kafka
-```bash
-docker exec -it kafka bash
-```
-### Lister les topics
-```bash
-kafka-topics --bootstrap-server localhost:9092 --list
-```
-### Créer un topic
-```bash
-kafka-topics --create \
-  --topic patient.created \
-  --bootstrap-server localhost:9092 \
-  --replication-factor 1 \
-  --partitions 1
-```
-### Consommer un topic
-```bash
-kafka-console-consumer \
-  --bootstrap-server localhost:9092 \
-  --topic patient.created \
-  --from-beginning
-```
+6. **Aperçu des topics dans Kafka UI**  
+   ![Topics](TestScreenshots/Topics.png)
