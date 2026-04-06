@@ -107,6 +107,18 @@ services:
     networks:
       - kafka-net
 
+  billing-service:
+    build: ./billing-service
+    container_name: billing-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    networks:
+      - kafka-net
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
@@ -116,6 +128,8 @@ services:
       - patient-service
       - medecin-service
       - rendezvous-service
+      - consultation-service
+      - billing-service
     networks:
       - kafka-net
 
