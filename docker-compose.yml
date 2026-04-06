@@ -95,6 +95,18 @@ services:
     networks:
       - kafka-net
 
+  consultation-service:
+    build: ./consultation-service
+    container_name: consultation-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    networks:
+      - kafka-net
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
