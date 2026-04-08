@@ -1,102 +1,78 @@
-# TP4 – Architecture Event-Driven (EDA) avec Kafka
-## Gestion d’un Cabinet Médical
+# TP4 — Architecture Event-Driven avec Apache Kafka
+### Cabinet Médical | Master IPS — Systèmes Distribués Basés sur les Microservices
 
-Cours assuré par : Jaouad OUHSSAINE  
-Master IPS — Module : Systèmes Distribués Basés sur les Microservices  
-Contact : jaouad.ouhs@gmail.com | jaouad_ouhssaine@um5.ac.ma
+**Encadrant :** Jaouad OUHSSAINE  
+**Contact :** jaouad.ouhs@gmail.com · jaouad_ouhssaine@um5.ac.ma
 
 ---
 
-## Contexte
+## Contexte & Motivation
 
-Dans le TP3, les microservices communiquaient via des appels REST synchrones.
+Le TP3 reposait sur une communication **REST synchrone** entre microservices, ce qui engendrait plusieurs problèmes :
 
-### Limites observées
-
-- Couplage fort entre services
+- Couplage fort entre les services
 - Dépendance à la disponibilité des autres services
-- Risque d’erreurs en cascade
+- Risque de pannes en cascade
 - Scalabilité limitée
-- Temps de réponse dépendant des autres services
+- Temps de réponse tributaire des services tiers
+
+Le TP4 fait évoluer cette architecture vers un modèle **asynchrone et découplé**, basé sur Apache Kafka.
 
 ---
 
-## Objectif du TP4
+## Objectif
 
-Faire évoluer l’architecture vers une :
+Migrer vers une **Architecture Event-Driven (EDA)** en introduisant les principes suivants :
 
-Architecture Event-Driven (EDA) basée sur Apache Kafka
-
-### Principes introduits
-
-- Communication asynchrone
-- Découplage fort entre services
-- Modèle Publish / Subscribe
-- Consistance éventuelle
-- Saga distribuée par chorégraphie
+| Principe | Description |
+|---|---|
+| Communication asynchrone | Les services émettent et consomment des événements sans attente directe |
+| Découplage fort | Les services sont indépendants les uns des autres |
+| Publish / Subscribe | Modèle d'échange via des topics Kafka |
+| Consistance éventuelle | La cohérence est garantie à terme, pas immédiatement |
+| Saga par chorégraphie | Coordination distribuée sans orchestrateur central |
 
 ---
 
-## Architecture globale
+## Architecture Globale
 
-L’architecture repose désormais sur :
+Les services ne communiquent **plus via REST**. Toutes les interactions internes passent par le **bus d'événements Kafka**.
 
-- Un API Gateway (exposition REST externe uniquement)
-- Un Kafka Event Bus
-- Des microservices autonomes
-- Une base de données par microservice
-- Une communication exclusivement événementielle entre services
+```
+Client HTTP
+    │
+    ▼
+API Gateway  (exposition REST externe uniquement)
+    │
+    ▼
+Kafka Event Bus
+    ├── Microservice A  →  Base de données A
+    ├── Microservice B  →  Base de données B
+    └── Microservice C  →  Base de données C
+```
 
-Les services ne s’appellent plus via REST.  
-Ils communiquent via des événements Kafka.
-
----
-
-## Commandes pour le déploiement Docker
-
-Pour compiler, construire et démarrer les conteneurs Docker de tous les microservices, utilisez les commandes suivantes :
-
-1. Paramétrer votre projet (en ignorant les tests) :
-    ```bash
-    mvn -DskipTests package
-    ```
-
-2. Construire les images Docker sans cache :
-    ```bash
-    docker compose build --no-cache
-    ```
-
-3. Démarrer les conteneurs en arrière-plan et reconstruire si nécessaire :
-    ```bash
-    docker compose up -d --build
-    ```
-
-4. Pour arrêter et supprimer les conteneurs :
-    ```bash
-    docker compose down
-    ```
+Chaque microservice est **autonome** et possède sa propre base de données.
 
 ---
 
-## Scénario de test
+## Déploiement Docker
 
-Voici un exemple pas à pas de la création de différentes ressources :
+### 1. Compiler le projet (sans exécuter les tests)
+```bash
+mvn -DskipTests package
+```
 
-1. **Création d'un patient**  
-   ![Patient Creation](TestScreenshots/PatientCreation.png)
+### 2. Construire les images Docker (sans cache)
+```bash
+docker compose build --no-cache
+```
 
-2. **Création d'un médecin**  
-   ![Medecin Creation](TestScreenshots/MedecinCreation.png)
+### 3. Démarrer les conteneurs en arrière-plan
+```bash
+docker compose up -d --build
+```
 
-3. **Création d'un rendez-vous** (déclenche automatiquement la création d'une consultation, puis d'une facture)  
-   ![Rendezvous Creation 1](TestScreenshots/Rendezvouscreation1.png)  
-   ![Rendezvous Creation 2](TestScreenshots/Rendezvouscreation2.png)
-
-4. **Vérification des consultations**  
-   ![Consultations](TestScreenshots/Consultations.png)
-
-5. **Vérification des factures**  
-   ![Factures](TestScreenshots/Factures.png)
-
-6. **Aperçu des topics dans Kafka UI**  
-   ![Topics](TestScreenshots/Topics.png)
+### 4. Arrêter et supprimer les conteneurs
+```bash
+docker compose down
+```
